@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -198,7 +199,6 @@ func main() {
 	flag.Parse()
 
 	reader := csv.NewReader(os.Stdin)
-
 	var colMap map[int]int
 
 	resource := resources{
@@ -222,7 +222,7 @@ func main() {
 			if err == io.EOF {
 				break
 			} else if err != nil {
-				log.Fatalln(err)
+				log.Fatalln("Error reading source", err)
 			}
 			if i == 0 {
 				colMap = setCol(payload{
@@ -241,9 +241,9 @@ func main() {
 	}()
 
 	results := make(chan payload)
-
 	var wg sync.WaitGroup
 	wg.Add(*gophers)
+
 	go func() {
 		wg.Wait()
 		close(results)
@@ -259,7 +259,7 @@ func main() {
 		}()
 	}
 	outputCSV(*outfile, results)
-	fmt.Printf(" Elapsed Time: %v, Total Records: %v\n", time.Since(start), counter)
+	fmt.Printf(" Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 }
 
 func tCase(f string) string {
@@ -589,6 +589,20 @@ func parseDate(d string) (string, string, string, string) {
 	return "", "", "", ""
 }
 
+func readDir() []string {
+	var f []string
+	files, err := ioutil.ReadDir(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".csv" {
+			f = append(f, file.Name())
+		}
+	}
+	return f
+}
+
 func setCol(r payload) map[int]int {
 	c := make(map[int]int)
 	for i, v := range r.record {
@@ -704,9 +718,16 @@ func process(pay payload, res resources) payload {
 	pay.record[zipCrrt] = fmt.Sprintf("%v%v", pay.record[zip], pay.record[crrt])
 	// Set Radius(miles) based on Central Zip and Row Zip
 	pay.record[radius] = fmt.Sprintf("%.2f", distance(getLatLong(strconv.Itoa(pay.param.CentZip), pay.record[zip], res)))
+	// Set Coordinte value
+	_, _, vlat1, vlon2 := getLatLong(strconv.Itoa(pay.param.CentZip), pay.record[zip], res)
+	pay.record[coordinates] = fmt.Sprintf("%v,%v", vlat1, vlon2)
 	// Set DelDate, Date, Dld_Year, Dld_Month, Dld_Day
 	pay.record[delDate], pay.record[dldYear], pay.record[dldMonth], pay.record[dldDay] = parseDate(pay.record[delDate])
 	pay.record[date], _, _, _ = parseDate(pay.record[date])
+	// Set Extended State Value
+	if exstate, ok := usStDict[pay.record[state]]; ok {
+		pay.record[expandedState] = exstate
+	}
 	// Set SCF value
 	pay.record[scf] = setSCF(pay.record[zip])
 	// Set DDU Faculity
@@ -719,8 +740,10 @@ func process(pay payload, res resources) payload {
 	}
 	// Set Ethnicity
 	if _, ok := res.hist[pay.record[lastName]]; ok {
-		pay.record[41] = "Hisp"
+		pay.record[ethnicity] = "Hisp"
 	}
+	// Set Vendor
+	pay.record[vendor] = pay.param.Vendor
 
 	return pay
 }
