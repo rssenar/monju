@@ -602,10 +602,15 @@ func parseDate(d string) (string, string, string, string) {
 	return "", "", "", ""
 }
 
-func parseFullName(fn string) (string, string) {
-	// nameString := gonameparts.Parse(fn)
-	// return nameString.FirstName, nameString.LastName
-	return "", ""
+func parseFullName(fn string) (string, string, string) {
+	if len(strings.Split(fn, " ")) == 2 {
+		name := strings.Split(fn, " ")
+		return name[0], "", name[1]
+	} else if len(strings.Split(fn, " ")) == 3 {
+		name := strings.Split(fn, " ")
+		return name[0], name[1], name[2]
+	}
+	return "", "", ""
 }
 
 func readDir() string {
@@ -715,13 +720,13 @@ func process(pay payload, res resources) payload {
 			pay.record[i] = tCase(v)
 		}
 	}
+	// Parse FullName if FirstName & LastName == ""
+	if pay.record[fullName] != "" && pay.record[firstName] == "" && pay.record[lastName] == "" {
+		pay.record[firstName], pay.record[mi], pay.record[lastName] = parseFullName(pay.record[fullName])
+	}
 	// Combine FirstName + LastName to FullName
 	if pay.record[fullName] == "" {
 		pay.record[fullName] = fmt.Sprintf("%v %v", pay.record[firstName], pay.record[lastName])
-	}
-
-	if pay.record[firstName] == "" && pay.record[lastName] == "" && pay.record[fullName] != "" {
-		pay.record[firstName], pay.record[lastName] = parseFullName(pay.record[fullName])
 	}
 	// Combine address1 + Address2 to AddressFull
 	pay.record[addressFull] = fmt.Sprintf("%v %v", pay.record[address1], pay.record[address2])
