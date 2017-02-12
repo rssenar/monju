@@ -64,9 +64,12 @@ const (
 	dldYear              // 42
 	dldMonth             // 43
 	dldDay               // 44
-	misc1                // 45
-	misc2                // 46
-	misc3                // 47
+	lsdYear              // 45
+	lsdMonth             // 46
+	lsdDay               // 47
+	misc1                // 48
+	misc2                // 49
+	misc3                // 50
 )
 
 // Set Header row
@@ -116,6 +119,9 @@ var header = []string{
 	"Dld_Year",
 	"Dld_Month",
 	"Dld_Day",
+	"Lsd_Year",
+	"Lsd_Month",
+	"Lsd_Day",
 	"Misc1",
 	"Misc2",
 	"Misc",
@@ -190,16 +196,20 @@ type resources struct {
 }
 
 func main() {
-	var counter int
 	start := time.Now()
 	var (
+		counter int
 		gophers = flag.Int("gophers", 1, "Workers to run in parallel")
-		outfile = flag.String("output", "output.csv", "Export CSV name")
+		outfile = fmt.Sprintf("%v_output.csv", readDir()[:len(readDir())-4])
+		colMap  map[int]int
 	)
 	flag.Parse()
 
-	reader := csv.NewReader(os.Stdin)
-	var colMap map[int]int
+	file, err := os.Open(readDir())
+	if err != nil {
+		log.Fatalln("error opening file", err)
+	}
+	reader := csv.NewReader(file)
 
 	resource := resources{
 		cord:   loadZipCor(),
@@ -231,7 +241,7 @@ func main() {
 				})
 			} else {
 				tasks <- mapCol(payload{
-					counter: i + 1000,
+					counter: i,
 					record:  row,
 					param:   loadConfig(),
 				}, colMap)
@@ -258,7 +268,7 @@ func main() {
 			}
 		}()
 	}
-	outputCSV(*outfile, results)
+	outputCSV(outfile, results)
 	fmt.Printf(" Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 }
 
@@ -518,10 +528,11 @@ func loadGenSNm() map[string]int {
 }
 
 func reformatPhone(p string) string {
-	c := []string{"-", " ", ".", "*"}
-	for _, v := range c {
+	sep := []string{"-", ".", "*", "(", ")"}
+	for _, v := range sep {
 		p = strings.Replace(p, v, "", -1)
 	}
+	p = strings.Replace(p, " ", "", -1)
 	switch len(p) {
 	case 10:
 		p = fmt.Sprintf("(%v) %v-%v", p[0:3], p[3:6], p[6:10])
@@ -579,89 +590,100 @@ func getLatLong(cZip, rZip string, res resources) (float64, float64, float64, fl
 }
 
 func parseDate(d string) (string, string, string, string) {
-	dfmt := []string{"1/2/06", "01/02/06", "01/02/2006", "1-2-06", "01-02-06", "01-02-2006"}
-	for _, v := range dfmt {
-		t, err := time.Parse(v, d)
-		if err == nil {
-			return t.String()[:10], strconv.Itoa(t.Year()), strconv.Itoa(int(t.Month())), strconv.Itoa(t.Day())
+	if d != "" {
+		formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06", "2006/1/2", "2006-1-2"}
+		for _, f := range formats {
+			if t, err := time.Parse(f, d); err == nil {
+				nDate := fmt.Sprintf("%v/%v/%v", strconv.Itoa(t.Year()), strconv.Itoa(int(t.Month())), strconv.Itoa(t.Day()))
+				return nDate, strconv.Itoa(t.Year()), strconv.Itoa(int(t.Month())), strconv.Itoa(t.Day())
+			}
 		}
 	}
 	return "", "", "", ""
 }
 
-func readDir() []string {
-	var f []string
+func parseFullName(fn string) (string, string) {
+	// nameString := gonameparts.Parse(fn)
+	// return nameString.FirstName, nameString.LastName
+	return "", ""
+}
+
+func readDir() string {
 	files, err := ioutil.ReadDir(".")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error reading Directory", err)
 	}
+	var f []string
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".csv" {
 			f = append(f, file.Name())
 		}
 	}
-	return f
+	if len(f) > 1 {
+		log.Fatalln("Directory must contain single .csv file")
+	}
+	return f[0]
 }
 
 func setCol(r payload) map[int]int {
 	c := make(map[int]int)
 	for i, v := range r.record {
 		switch {
-		case regexp.MustCompile(`(?i)cust.+id`).MatchString(v):
+		case regexp.MustCompile(`(?i)cust.+id`).MatchString(tCase(v)):
 			c[custID] = i
-		case regexp.MustCompile(`(?i)ful.+me`).MatchString(v):
+		case regexp.MustCompile(`(?i)ful.+me`).MatchString(tCase(v)):
 			c[fullName] = i
-		case regexp.MustCompile(`(?i)fir.+me`).MatchString(v):
+		case regexp.MustCompile(`(?i)fir.+me`).MatchString(tCase(v)):
 			c[firstName] = i
-		case regexp.MustCompile(`(?i)^mi$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^mi$`).MatchString(tCase(v)):
 			c[mi] = i
-		case regexp.MustCompile(`(?i)las.+me`).MatchString(v):
+		case regexp.MustCompile(`(?i)las.+me`).MatchString(tCase(v)):
 			c[lastName] = i
-		case regexp.MustCompile(`(?i)addr.+1`).MatchString(v):
+		case regexp.MustCompile(`(?i)addr.+1`).MatchString(tCase(v)):
 			c[address1] = i
-		case regexp.MustCompile(`(?i)addr.+2`).MatchString(v):
+		case regexp.MustCompile(`(?i)addr.+2`).MatchString(tCase(v)):
 			c[address2] = i
-		case regexp.MustCompile(`(?i)^city$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^city$`).MatchString(tCase(v)):
 			c[city] = i
-		case regexp.MustCompile(`(?i)^state$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^state$`).MatchString(tCase(v)):
 			c[state] = i
-		case regexp.MustCompile(`(?i)^zip$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^zip$`).MatchString(tCase(v)):
 			c[zip] = i
-		case regexp.MustCompile(`(?i)^4zip$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^4zip$`).MatchString(tCase(v)):
 			c[zip4] = i
-		case regexp.MustCompile(`(?i)^zip4$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^zip4$`).MatchString(tCase(v)):
 			c[zip4] = i
-		case regexp.MustCompile(`(?i)^hph$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^hph$`).MatchString(tCase(v)):
 			c[hph] = i
-		case regexp.MustCompile(`(?i)^bph$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^bph$`).MatchString(tCase(v)):
 			c[bph] = i
-		case regexp.MustCompile(`(?i)^cph$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^cph$`).MatchString(tCase(v)):
 			c[cph] = i
-		case regexp.MustCompile(`(?i)^email$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^email$`).MatchString(tCase(v)):
 			c[email] = i
-		case regexp.MustCompile(`(?i)^vin$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^vin$`).MatchString(tCase(v)):
 			c[vin] = i
-		case regexp.MustCompile(`(?i)^year$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^year$`).MatchString(tCase(v)):
 			c[vyear] = i
-		case regexp.MustCompile(`(?i)^vyr$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^vyr$`).MatchString(tCase(v)):
 			c[vyear] = i
-		case regexp.MustCompile(`(?i)^make$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^make$`).MatchString(tCase(v)):
 			c[vmake] = i
-		case regexp.MustCompile(`(?i)^vmk$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^vmk$`).MatchString(tCase(v)):
 			c[vmake] = i
-		case regexp.MustCompile(`(?i)^model$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^model$`).MatchString(tCase(v)):
 			c[vmodel] = i
-		case regexp.MustCompile(`(?i)^vmd$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^vmd$`).MatchString(tCase(v)):
 			c[vmodel] = i
-		case regexp.MustCompile(`(?i)^DelDate$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^DelDate$`).MatchString(tCase(v)):
 			c[delDate] = i
-		case regexp.MustCompile(`(?i)^Date$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^Date$`).MatchString(tCase(v)):
 			c[date] = i
-		case regexp.MustCompile(`(?i)^DSF_WALK_SEQ$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^DSF_WALK_SEQ$`).MatchString(tCase(v)):
 			c[dsfwalkseq] = i
-		case regexp.MustCompile(`(?i)^Crrt$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^Crrt$`).MatchString(tCase(v)):
 			c[crrt] = i
-		case regexp.MustCompile(`(?i)^KBB$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^KBB$`).MatchString(tCase(v)):
 			c[kbb] = i
 		}
 	}
@@ -697,6 +719,10 @@ func process(pay payload, res resources) payload {
 	if pay.record[fullName] == "" {
 		pay.record[fullName] = fmt.Sprintf("%v %v", pay.record[firstName], pay.record[lastName])
 	}
+
+	if pay.record[firstName] == "" && pay.record[lastName] == "" && pay.record[fullName] != "" {
+		pay.record[firstName], pay.record[lastName] = parseFullName(pay.record[fullName])
+	}
 	// Combine address1 + Address2 to AddressFull
 	pay.record[addressFull] = fmt.Sprintf("%v %v", pay.record[address1], pay.record[address2])
 	// Set Phone field based on availability of hph, bph & cph
@@ -723,7 +749,7 @@ func process(pay payload, res resources) payload {
 	pay.record[coordinates] = fmt.Sprintf("%v,%v", vlat1, vlon2)
 	// Set DelDate, Date, Dld_Year, Dld_Month, Dld_Day
 	pay.record[delDate], pay.record[dldYear], pay.record[dldMonth], pay.record[dldDay] = parseDate(pay.record[delDate])
-	pay.record[date], _, _, _ = parseDate(pay.record[date])
+	pay.record[date], pay.record[lsdYear], pay.record[lsdMonth], pay.record[lsdDay] = parseDate(pay.record[date])
 	// Set Extended State Value
 	if exstate, ok := usStDict[pay.record[state]]; ok {
 		pay.record[expandedState] = exstate
