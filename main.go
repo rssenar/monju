@@ -602,13 +602,80 @@ func parseDate(d string) (string, string, string, string) {
 	return "", "", "", ""
 }
 
+func checkSalut(f string) bool {
+	salutations := []string{"MR", "MR.", "MS", "MS.", "MRS", "MRS.", "DR", "DR.", "MISS", "DOCTOR",
+		"DR.", "CORP", "SGT", "PVT", "JUDGE", "CAPT", "COL", "MAJ", "LT", "LIEUTENANT", "PRM",
+		"PATROLMAN", "HON", "OFFICER", "REV", "PRES", "PRESIDENT", "GOV", "GOVERNOR",
+		"VICE PRESIDENT", "VP", "MAYOR", "SIR", "MADAM", "HONORABLE"}
+	for _, salu := range salutations {
+		if tCase(f) == tCase(salu) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkSep(f string) bool {
+	separators := []string{"&", "AND", "OR", "/"}
+	for _, sep := range separators {
+		if tCase(f) == tCase(sep) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkSuf(f string) bool {
+	suffixes := []string{"ESQ", "PHD", "MD"}
+	for _, suf := range suffixes {
+		if tCase(f) == tCase(suf) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkGener(f string) bool {
+	generations := []string{"JR", "SR", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX",
+		"X", "1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH", "9TH", "10TH", "FIRST",
+		"SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "NINTH", "TENTH"}
+	for _, gen := range generations {
+		if tCase(f) == tCase(gen) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseNameSeparators(sl []string) []string {
+	var nsl []string
+	for i := 1; i <= len(sl); i++ {
+		v := tCase(sl[len(sl)-i])
+		if checkSep(v) {
+			break
+		} else if checkSuf(v) {
+			continue
+		} else if checkGener(v) {
+			continue
+		} else if checkSalut(v) {
+			continue
+		}
+		nsl = append([]string{v}, nsl...)
+	}
+	return nsl
+}
+
 func parseFullName(fn string) (string, string, string) {
-	if len(strings.Split(fn, " ")) == 2 {
-		name := strings.Split(fn, " ")
-		return name[0], "", name[1]
-	} else if len(strings.Split(fn, " ")) == 3 {
-		name := strings.Split(fn, " ")
-		return name[0], name[1], name[2]
+	fnSplit := parseNameSeparators(strings.Split(fn, " "))
+	if len(fnSplit) == 1 {
+		return fnSplit[0], "", ""
+	} else if len(fnSplit) == 2 {
+		return fnSplit[0], "", fnSplit[1]
+	} else if len(fnSplit) == 3 {
+		if len(fnSplit[2]) == 1 && len(fnSplit[1]) > 2 {
+			return fnSplit[0], "", fnSplit[1]
+		}
+		return fnSplit[0], fnSplit[1], fnSplit[2]
 	}
 	return "", "", ""
 }
