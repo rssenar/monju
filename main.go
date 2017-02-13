@@ -584,29 +584,26 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	return 2 * rad * math.Asin(math.Sqrt(h))
 }
 
+func valZipCode(z string) string {
+	if z[:1] == "0" {
+		z = z[1:]
+		return z
+	}
+	return z
+}
+
 func getLatLong(cZip, rZip string, res resources) (float64, float64, float64, float64) {
-	if cZip[:1] == "0" {
-		cZip = cZip[1:]
-	}
-	if rZip[:1] == "0" {
-		rZip = rZip[1:]
-	}
-	// Set Coordinates Feild
-	recCor, ok := res.cord[rZip]
-	if !ok {
-		log.Fatalln("Invalid Record Zip Code")
-	}
-	// Calculate Distance
-	cenCor, ok := res.cord[cZip]
-	if !ok {
-		log.Fatalln("Invalid Central Zip Code")
-	}
+	// Validate Record ZIP
+	recCor := res.cord[valZipCode(rZip)]
+	// Validate Central ZIP
+	cenCor := res.cord[valZipCode(cZip)]
+	// convert Coordinates tin FLoat64
 	lat1, err := strconv.ParseFloat(cenCor[0], 64)
 	lon1, err := strconv.ParseFloat(cenCor[1], 64)
 	lat2, err := strconv.ParseFloat(recCor[0], 64)
 	lon2, err := strconv.ParseFloat(recCor[1], 64)
 	if err != nil {
-		log.Fatalln("Error parsing Coordinates", err)
+		log.Fatalln("Error converting coordinates", err)
 	}
 	return lat1, lon1, lat2, lon2
 }
@@ -625,8 +622,8 @@ func parseDate(d string) (string, string, string, string) {
 }
 
 func checkSalut(f string) bool {
-	salutations := []string{"MR", "MR.", "MS", "MS.", "MRS", "MRS.", "DR", "DR.", "MISS", "DOCTOR",
-		"DR.", "CORP", "SGT", "PVT", "JUDGE", "CAPT", "COL", "MAJ", "LT", "LIEUTENANT", "PRM",
+	salutations := []string{"MR", "MR.", "MS", "MS.", "MRS", "MRS.", "DR", "DR.", "MISS",
+		"CORP", "SGT", "PVT", "JUDGE", "CAPT", "COL", "MAJ", "LT", "LIEUTENANT", "PRM",
 		"PATROLMAN", "HON", "OFFICER", "REV", "PRES", "PRESIDENT", "GOV", "GOVERNOR",
 		"VICE PRESIDENT", "VP", "MAYOR", "SIR", "MADAM", "HONORABLE"}
 	for _, salu := range salutations {
@@ -716,18 +713,14 @@ func checkNameSeparators(sl []string) []string {
 	return nsl
 }
 
-// if gen != "" {
-// 		nsl[len(nsl)-1] = fmt.Sprintf("%v %v", nsl[len(nsl)-1], gen)
-// 		return append(nsl, gen)
-// 	}
-
 func parseFullName(fn string) (string, string, string) {
 	fnSplit := checkNameSeparators(strings.Fields(fn))
-	if len(fnSplit) == 1 {
+	switch len(fnSplit) {
+	case 1:
 		return fnSplit[0], "", ""
-	} else if len(fnSplit) == 2 {
+	case 2:
 		return fnSplit[0], "", fnSplit[1]
-	} else if len(fnSplit) == 3 {
+	case 3:
 		if len(fnSplit[2]) == 1 && len(fnSplit[1]) > 2 {
 			return fnSplit[0], "", fnSplit[1]
 		}
@@ -837,11 +830,12 @@ func process(pay payload, res resources) payload {
 	// Combine address1 + Address2 to AddressFull
 	pay.record[addressFull] = fmt.Sprintf("%v %v", pay.record[address1], pay.record[address2])
 	// Set Phone field based on availability of hph, bph & cph
-	if pay.record[hph] != "" {
+	switch {
+	case pay.record[hph] != "":
 		pay.record[phone] = pay.record[hph]
-	} else if pay.record[bph] != "" {
+	case pay.record[bph] != "":
 		pay.record[phone] = pay.record[bph]
-	} else {
+	case pay.record[cph] != "":
 		pay.record[phone] = pay.record[cph]
 	}
 	// If Zip format is 92882-2341, split to Zip & Zip4
@@ -853,11 +847,23 @@ func process(pay payload, res resources) payload {
 	pay.record[vinLen] = fmt.Sprint(len(pay.record[vin]))
 	// Set ZipCrrt
 	pay.record[zipCrrt] = fmt.Sprintf("%v%v", pay.record[zip], pay.record[crrt])
-	// Set Radius(miles) based on Central Zip and Row Zip
-	pay.record[radius] = fmt.Sprintf("%.2f", distance(getLatLong(strconv.Itoa(pay.param.CentZip), pay.record[zip], res)))
-	// Set Coordinte value
-	_, _, vlat1, vlon2 := getLatLong(strconv.Itoa(pay.param.CentZip), pay.record[zip], res)
-	pay.record[coordinates] = fmt.Sprintf("%v,%v", vlat1, vlon2)
+	// Validate Central Zipcode
+	_, okCzip := res.cord[valZipCode(strconv.Itoa(pay.param.CentZip))]
+	if !okCzip {
+		log.Fatalln("Invalid Central Zip Code enter, please re-enter...")
+	}
+	// Validate Central record Zipcode
+	_, okRzip := res.cord[valZipCode(pay.record[zip])]
+	if !okRzip {
+		log.Printf("Invalid Zip Code on row %v, zip code %v (%v, %v) ", pay.counter, pay.record[zip], pay.record[city], pay.record[state])
+	}
+	if okRzip && okCzip {
+		// Set Radius(miles) based on Central Zip and Row Zip
+		clat1, clon2, rlat1, rlon2 := getLatLong(strconv.Itoa(pay.param.CentZip), pay.record[zip], res)
+		pay.record[radius] = fmt.Sprintf("%.2f", distance(clat1, clon2, rlat1, rlon2))
+		// Set Coordinte value
+		pay.record[coordinates] = fmt.Sprintf("%v,%v", rlat1, rlon2)
+	}
 	// Set DelDate, Date, Dld_Year, Dld_Month, Dld_Day
 	pay.record[delDate], pay.record[dldYear], pay.record[dldMonth], pay.record[dldDay] = parseDate(pay.record[delDate])
 	pay.record[date], pay.record[lsdYear], pay.record[lsdMonth], pay.record[lsdDay] = parseDate(pay.record[date])
