@@ -648,9 +648,23 @@ func checkSep(f string) bool {
 }
 
 func checkSuf(f string) bool {
-	suffixes := []string{"ESQ", "PHD", "MD"}
+	suffixes := []string{"ESQ", "PHD", "MD", "TRUE"}
 	for _, suf := range suffixes {
 		if tCase(f) == tCase(suf) {
+			return true
+		}
+	}
+	return false
+}
+
+func checklnPref(f string) bool {
+	lnPrefixes := []string{"DE", "DA", "DI", "LA", "LOS", "DU", "DEL", "DEI", "VDA", "DELLO", "DELLA",
+		"DEGLI", "DELLE", "VAN", "VON", "DER", "DEN", "MC", "HEER", "TEN", "TER", "VANDE", "VANDEN",
+		"VANDER", "VOOR", "VER", "AAN", "MC", "SAN", "SAINZ", "BIN", "LI", "LE", "DES",
+		"AM", "AUS'M", "VOM", "ZUM", "ZUR", "TEN", "IBN", "ABUa", "BON", "BIN", "DAL",
+		"DER", "IBN", "LE", "ST", "STE", "VAN", "VEL", "VON"}
+	for _, pref := range lnPrefixes {
+		if tCase(f) == tCase(pref) {
 			return true
 		}
 	}
@@ -669,26 +683,46 @@ func checkGener(f string) bool {
 	return false
 }
 
-func parseNameSeparators(sl []string) []string {
+func checkNameSeparators(sl []string) []string {
 	var nsl []string
+	var gen string
 	for i := 1; i <= len(sl); i++ {
 		v := tCase(sl[len(sl)-i])
 		if checkSep(v) {
-			break
+			if i == 1 {
+				continue
+			} else {
+				break
+			}
 		} else if checkSuf(v) {
-			continue
-		} else if checkGener(v) {
 			continue
 		} else if checkSalut(v) {
 			continue
+		} else if checkGener(v) {
+			gen = v
+			continue
+		} else if checklnPref(v) {
+			for _, s := range nsl {
+				v = fmt.Sprintf("%v %v", v, s)
+			}
+			nsl = []string{}
 		}
 		nsl = append([]string{v}, nsl...)
+	}
+	if gen != "" {
+		nsl[len(nsl)-1] = fmt.Sprintf("%v %v", nsl[len(nsl)-1], gen)
+		return nsl
 	}
 	return nsl
 }
 
+// if gen != "" {
+// 		nsl[len(nsl)-1] = fmt.Sprintf("%v %v", nsl[len(nsl)-1], gen)
+// 		return append(nsl, gen)
+// 	}
+
 func parseFullName(fn string) (string, string, string) {
-	fnSplit := parseNameSeparators(strings.Split(fn, " "))
+	fnSplit := checkNameSeparators(strings.Fields(fn))
 	if len(fnSplit) == 1 {
 		return fnSplit[0], "", ""
 	} else if len(fnSplit) == 2 {
