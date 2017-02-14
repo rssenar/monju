@@ -159,7 +159,7 @@ type resources struct {
 func readDir() string {
 	files, err := ioutil.ReadDir(".")
 	if err != nil {
-		log.Fatal("Error reading Directory", err)
+		log.Fatalln("Error reading Directory", err)
 	}
 	var f []string
 	for _, file := range files {
@@ -168,7 +168,7 @@ func readDir() string {
 		}
 	}
 	if len(f) > 1 {
-		log.Fatalln("Directory must contain single .csv file")
+		log.Fatalln("Error.. directory must contain only a single .csv file")
 	}
 	return f[0]
 }
@@ -185,7 +185,7 @@ func main() {
 
 	file, err := os.Open(readDir())
 	if err != nil {
-		log.Fatalln("error opening file", err)
+		log.Fatalln("Error opening source file", err)
 	}
 	reader := csv.NewReader(file)
 
@@ -203,14 +203,11 @@ func main() {
 	go func() {
 		for i := 0; ; i++ {
 			counter = i
-			if i%10000 == 0 {
-				fmt.Print(">")
-			}
 			row, err := reader.Read()
 			if err == io.EOF {
 				break
 			} else if err != nil {
-				log.Fatalln("Error reading source", err)
+				log.Fatalln("Error reading source row", err)
 			}
 			if i == 0 {
 				colMap = setCol(payload{
@@ -247,7 +244,7 @@ func main() {
 		}()
 	}
 	outputCSV(outfile, results)
-	fmt.Printf("\nElapsed Time: %v, Total: %v\n", time.Since(start), counter)
+	fmt.Printf("Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 }
 
 func tCase(f string) string {
@@ -262,10 +259,11 @@ func lCase(f string) string {
 func cInt(f string) int {
 	i, err := strconv.Atoi(f)
 	if err != nil {
-		log.Fatalln("Error converting string to int", err)
+		log.Fatalf("Error converting string to int %v (%v)", err, f)
 	}
 	return i
 }
+
 func decYr(y string) string {
 	// YearDecodeDict is a map of 2-Digit abbreviated Years
 	yrDecDict := map[string]string{"0": "2000",
@@ -623,7 +621,7 @@ func parseDate(d string) (string, string, string, string) {
 
 func checkSalut(f string) bool {
 	salutations := []string{"MR", "MR.", "MS", "MS.", "MRS", "MRS.", "DR", "DR.", "MISS",
-		"CORP", "SGT", "PVT", "JUDGE", "CAPT", "COL", "MAJ", "LT", "LIEUTENANT", "PRM",
+		"CORP", "SGT", "PVT", "CAPT", "COL", "MAJ", "LT", "LIEUTENANT", "PRM",
 		"PATROLMAN", "HON", "OFFICER", "REV", "PRES", "PRESIDENT", "GOV", "GOVERNOR",
 		"VICE PRESIDENT", "VP", "MAYOR", "SIR", "MADAM", "HONORABLE"}
 	for _, salu := range salutations {
@@ -686,7 +684,7 @@ func checkNameSeparators(sl []string) []string {
 	for i := 1; i <= len(sl); i++ {
 		v := tCase(sl[len(sl)-i])
 		if checkSep(v) {
-			if i == 1 {
+			if i < 3 {
 				continue
 			} else {
 				break
@@ -696,7 +694,9 @@ func checkNameSeparators(sl []string) []string {
 		} else if checkSalut(v) {
 			continue
 		} else if checkGener(v) {
-			gen = v
+			if i == 1 {
+				gen = v
+			}
 			continue
 		} else if checklnPref(v) {
 			for _, s := range nsl {
@@ -725,6 +725,10 @@ func parseFullName(fn string) (string, string, string) {
 			return fnSplit[0], "", fnSplit[1]
 		}
 		return fnSplit[0], fnSplit[1], fnSplit[2]
+	case 4:
+		return fnSplit[0], "", fnSplit[3]
+	case 5:
+		return fnSplit[0], "", fnSplit[4]
 	}
 	return "", "", ""
 }
