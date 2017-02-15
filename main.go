@@ -138,6 +138,7 @@ type initConfig struct {
 	Source          string
 	DelBlankDATE    bool
 	DelBlankDELDATE bool
+	Headers         []string
 }
 
 type payload struct {
@@ -198,6 +199,7 @@ func main() {
 		genS:   loadGenS(),
 		genSNm: loadGenSNm(),
 	}
+	config := loadConfig()
 
 	tasks := make(chan payload)
 	go func() {
@@ -218,7 +220,7 @@ func main() {
 				tasks <- mapCol(payload{
 					counter: i,
 					record:  row,
-					param:   loadConfig(),
+					param:   config,
 				}, colMap)
 			}
 		}
@@ -908,4 +910,41 @@ func outputCSV(out string, results <-chan payload) {
 		}
 	}
 	w.Flush()
+}
+
+func headerReassign(s []string) []string {
+	var nr []string
+	col := map[string]int{
+		"customerid":   0,
+		"fullname":     1,
+		"firstname":    2,
+		"mi":           3,
+		"lastname":     4,
+		"address1":     5,
+		"address2":     6,
+		"addressfull":  7,
+		"city":         8,
+		"state":        9,
+		"zip":          10,
+		"zip4":         11,
+		"hph":          12,
+		"bph":          13,
+		"cph":          14,
+		"email":        15,
+		"vin":          16,
+		"year":         17,
+		"make":         18,
+		"model":        19,
+		"deldate":      20,
+		"date":         21,
+		"dsf_walk_seq": 22,
+		"crrt":         23,
+		"kbb":          24,
+	}
+	for i, v := range s {
+		tCase(v)
+		fmt.Println(i)
+		fmt.Println(col)
+	}
+	return nr
 }
