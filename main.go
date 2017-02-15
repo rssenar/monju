@@ -72,61 +72,6 @@ const (
 	misc3                // 50
 )
 
-// Set Header row
-var header = []string{
-	"CustomerID",
-	"FullName",
-	"FirstName",
-	"MI",
-	"LastName",
-	"Address1",
-	"Address2",
-	"AddressFull",
-	"City",
-	"State",
-	"Zip",
-	"4Zip",
-	"SCF",
-	"Phone",
-	"HPH",
-	"BPH",
-	"CPH",
-	"Email",
-	"VIN",
-	"Year",
-	"Make",
-	"Model",
-	"DelDate",
-	"Date",
-	"Radius",
-	"Coordinates",
-	"VINLen",
-	"DSF_WALK_SEQ",
-	"Crrt",
-	"ZipCrrt",
-	"KBB",
-	"Buyback_Value",
-	"WinningNumber",
-	"MailDNQ",
-	"BlitzDNQ",
-	"Drop",
-	"PURL",
-	"DDUFacility",
-	"SCF3DFacility",
-	"Vendor",
-	"ExpandedState",
-	"Ethnicity",
-	"Dld_Year",
-	"Dld_Month",
-	"Dld_Day",
-	"Lsd_Year",
-	"Lsd_Month",
-	"Lsd_Day",
-	"Misc1",
-	"Misc2",
-	"Misc",
-}
-
 type initConfig struct {
 	CentZip         int
 	MaxRadius       int
@@ -214,13 +159,13 @@ func main() {
 			if i == 0 {
 				colMap = setCol(payload{
 					counter: i,
-					record:  row,
+					record:  addHeaderSup(row, resource),
 				})
 			} else {
 				tasks <- mapCol(payload{
 					counter: i,
 					record:  row,
-				}, colMap)
+				}, colMap, resource)
 			}
 		}
 		close(tasks)
@@ -244,7 +189,7 @@ func main() {
 			}
 		}()
 	}
-	outputCSV(outfile, results)
+	outputCSV(outfile, resource, results)
 	fmt.Printf("Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 }
 
@@ -799,8 +744,8 @@ func setCol(r payload) map[int]int {
 	return c
 }
 
-func mapCol(r payload, m map[int]int) payload {
-	nr := make([]string, len(header))
+func mapCol(r payload, m map[int]int, res resources) payload {
+	nr := make([]string, len(res.param.Headers))
 	for i := range nr {
 		_, ok := m[i]
 		if ok {
@@ -894,14 +839,14 @@ func process(pay payload, res resources) payload {
 	return pay
 }
 
-func outputCSV(out string, results <-chan payload) {
+func outputCSV(out string, res resources, results <-chan payload) {
 	f, err := os.Create(out)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer f.Close()
 	w := csv.NewWriter(f)
-	w.Write(header)
+	w.Write(res.param.Headers)
 
 	for r := range results {
 		if err := w.Write(r.record); err != nil {
@@ -911,39 +856,17 @@ func outputCSV(out string, results <-chan payload) {
 	w.Flush()
 }
 
-func headerReassign(s []string) []string {
-	var nr []string
-	col := map[string]int{
-		"customerid":   0,
-		"fullname":     1,
-		"firstname":    2,
-		"mi":           3,
-		"lastname":     4,
-		"address1":     5,
-		"address2":     6,
-		"addressfull":  7,
-		"city":         8,
-		"state":        9,
-		"zip":          10,
-		"zip4":         11,
-		"hph":          12,
-		"bph":          13,
-		"cph":          14,
-		"email":        15,
-		"vin":          16,
-		"year":         17,
-		"make":         18,
-		"model":        19,
-		"deldate":      20,
-		"date":         21,
-		"dsf_walk_seq": 22,
-		"crrt":         23,
-		"kbb":          24,
+func addHeaderSup(s []string, res resources) []string {
+	head := make(map[string]int)
+	for _, v := range res.param.Headers {
+		head[tCase(v)] = head[tCase(v)] + 1
 	}
-	for i, v := range s {
-		tCase(v)
-		fmt.Println(i)
-		fmt.Println(col)
+	var nr []string
+	nr = append(nr, res.param.Headers...)
+	for _, v := range s {
+		if _, ok := head[tCase(v)]; !ok {
+			nr = append(nr, tCase(v))
+		}
 	}
 	return nr
 }
