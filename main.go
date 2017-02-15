@@ -159,7 +159,7 @@ func main() {
 			if i == 0 {
 				colMap = setCol(payload{
 					counter: i,
-					record:  addHeaderSup(row, resource),
+					record:  row,
 				})
 			} else {
 				tasks <- mapCol(payload{
