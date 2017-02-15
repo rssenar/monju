@@ -144,10 +144,10 @@ type initConfig struct {
 type payload struct {
 	counter int
 	record  []string
-	param   initConfig
 }
 
 type resources struct {
+	param  initConfig
 	cord   map[string][]string
 	scfFac map[string]string
 	dduFac map[string]string
@@ -191,6 +191,7 @@ func main() {
 	reader := csv.NewReader(file)
 
 	resource := resources{
+		param:  loadConfig(),
 		cord:   loadZipCor(),
 		scfFac: loadSCFFac(),
 		dduFac: loadDDUFac(),
@@ -199,7 +200,6 @@ func main() {
 		genS:   loadGenS(),
 		genSNm: loadGenSNm(),
 	}
-	config := loadConfig()
 
 	tasks := make(chan payload)
 	go func() {
@@ -220,7 +220,6 @@ func main() {
 				tasks <- mapCol(payload{
 					counter: i,
 					record:  row,
-					param:   config,
 				}, colMap)
 			}
 		}
@@ -854,7 +853,7 @@ func process(pay payload, res resources) payload {
 	// Set ZipCrrt
 	pay.record[zipCrrt] = fmt.Sprintf("%v%v", pay.record[zip], pay.record[crrt])
 	// Validate Central Zipcode
-	_, okCzip := res.cord[valZipCode(strconv.Itoa(pay.param.CentZip))]
+	_, okCzip := res.cord[valZipCode(strconv.Itoa(res.param.CentZip))]
 	if !okCzip {
 		log.Fatalln("Invalid Central Zip Code enter, please re-enter...")
 	}
@@ -865,7 +864,7 @@ func process(pay payload, res resources) payload {
 	}
 	if okRzip && okCzip {
 		// Set Radius(miles) based on Central Zip and Row Zip
-		clat1, clon2, rlat1, rlon2 := getLatLong(strconv.Itoa(pay.param.CentZip), pay.record[zip], res)
+		clat1, clon2, rlat1, rlon2 := getLatLong(strconv.Itoa(res.param.CentZip), pay.record[zip], res)
 		pay.record[radius] = fmt.Sprintf("%.2f", distance(clat1, clon2, rlat1, rlon2))
 		// Set Coordinte value
 		pay.record[coordinates] = fmt.Sprintf("%v,%v", rlat1, rlon2)
@@ -890,7 +889,7 @@ func process(pay payload, res resources) payload {
 		pay.record[ethnicity] = "Hisp"
 	}
 	// Set Vendor
-	pay.record[vendor] = pay.param.Vendor
+	pay.record[vendor] = res.param.Vendor
 
 	return pay
 }
