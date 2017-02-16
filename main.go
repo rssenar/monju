@@ -19,60 +19,6 @@ import (
 	"time"
 )
 
-const (
-	custID        = iota // 0
-	fullName             // 1
-	firstName            // 2
-	mi                   // 3
-	lastName             // 4
-	address1             // 5
-	address2             // 6
-	addressFull          // 7
-	city                 // 8
-	state                // 9
-	zip                  // 10
-	zip4                 // 11
-	scf                  // 12
-	phone                // 13
-	hph                  // 14
-	bph                  // 15
-	cph                  // 16
-	email                // 17
-	vin                  // 18
-	vyear                // 19
-	vmake                // 20
-	vmodel               // 21
-	delDate              // 22
-	date                 // 23
-	radius               // 24
-	coordinates          // 25
-	vinLen               // 26
-	dsfwalkseq           // 27
-	crrt                 // 28
-	zipCrrt              // 29
-	kbb                  // 30
-	buybackValue         // 31
-	winNum               // 32
-	mailDnq              // 33
-	blitzDnq             // 34
-	drop                 // 35
-	purl                 // 36
-	dduFacility          // 37
-	scf3dFacility        // 38
-	vendor               // 39
-	expandedState        // 40
-	ethnicity            // 41
-	dldYear              // 42
-	dldMonth             // 43
-	dldDay               // 44
-	lsdYear              // 45
-	lsdMonth             // 46
-	lsdDay               // 47
-	misc1                // 48
-	misc2                // 49
-	misc3                // 50
-)
-
 type initConfig struct {
 	CentZip         int
 	MaxRadius       int
@@ -120,6 +66,14 @@ func readDir() string {
 	return f[0]
 }
 
+func constHeaderMap(h []string) map[string]int {
+	header := make(map[string]int)
+	for i, v := range h {
+		header[lCase(v)] = i
+	}
+	return header
+}
+
 func main() {
 	start := time.Now()
 	var (
@@ -147,6 +101,8 @@ func main() {
 		genSNm: loadGenSNm(),
 	}
 
+	hcm := constHeaderMap(resource.param.Headers)
+
 	tasks := make(chan payload)
 	go func() {
 		for i := 0; ; i++ {
@@ -161,7 +117,7 @@ func main() {
 				colMap = setCol(payload{
 					counter: i,
 					record:  row,
-				})
+				}, hcm)
 			} else {
 				tasks <- mapCol(payload{
 					counter: i,
@@ -185,7 +141,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for t := range tasks {
-				r := process(t, resource)
+				r := process(t, resource, hcm)
 				results <- r
 			}
 		}()
@@ -680,66 +636,122 @@ func parseFullName(fn string) (string, string, string) {
 	return "", "", ""
 }
 
-func setCol(r payload) map[int]int {
+func setCol(r payload, hdr map[string]int) map[int]int {
 	c := make(map[int]int)
 	for i, v := range r.record {
 		switch {
-		case regexp.MustCompile(`(?i)cust.+id`).MatchString(tCase(v)):
-			c[custID] = i
-		case regexp.MustCompile(`(?i)ful.+me`).MatchString(tCase(v)):
-			c[fullName] = i
-		case regexp.MustCompile(`(?i)fir.+me`).MatchString(tCase(v)):
-			c[firstName] = i
-		case regexp.MustCompile(`(?i)^mi$`).MatchString(tCase(v)):
-			c[mi] = i
-		case regexp.MustCompile(`(?i)las.+me`).MatchString(tCase(v)):
-			c[lastName] = i
-		case regexp.MustCompile(`(?i)addr.+1`).MatchString(tCase(v)):
-			c[address1] = i
-		case regexp.MustCompile(`(?i)addr.+2`).MatchString(tCase(v)):
-			c[address2] = i
-		case regexp.MustCompile(`(?i)^city$`).MatchString(tCase(v)):
-			c[city] = i
-		case regexp.MustCompile(`(?i)^state$`).MatchString(tCase(v)):
-			c[state] = i
-		case regexp.MustCompile(`(?i)^zip$`).MatchString(tCase(v)):
-			c[zip] = i
-		case regexp.MustCompile(`(?i)^4zip$`).MatchString(tCase(v)):
-			c[zip4] = i
-		case regexp.MustCompile(`(?i)^zip4$`).MatchString(tCase(v)):
-			c[zip4] = i
-		case regexp.MustCompile(`(?i)^hph$`).MatchString(tCase(v)):
-			c[hph] = i
-		case regexp.MustCompile(`(?i)^bph$`).MatchString(tCase(v)):
-			c[bph] = i
-		case regexp.MustCompile(`(?i)^cph$`).MatchString(tCase(v)):
-			c[cph] = i
-		case regexp.MustCompile(`(?i)^email$`).MatchString(tCase(v)):
-			c[email] = i
-		case regexp.MustCompile(`(?i)^vin$`).MatchString(tCase(v)):
-			c[vin] = i
-		case regexp.MustCompile(`(?i)^year$`).MatchString(tCase(v)):
-			c[vyear] = i
-		case regexp.MustCompile(`(?i)^vyr$`).MatchString(tCase(v)):
-			c[vyear] = i
-		case regexp.MustCompile(`(?i)^make$`).MatchString(tCase(v)):
-			c[vmake] = i
-		case regexp.MustCompile(`(?i)^vmk$`).MatchString(tCase(v)):
-			c[vmake] = i
-		case regexp.MustCompile(`(?i)^model$`).MatchString(tCase(v)):
-			c[vmodel] = i
-		case regexp.MustCompile(`(?i)^vmd$`).MatchString(tCase(v)):
-			c[vmodel] = i
-		case regexp.MustCompile(`(?i)^DelDate$`).MatchString(tCase(v)):
-			c[delDate] = i
-		case regexp.MustCompile(`(?i)^Date$`).MatchString(tCase(v)):
-			c[date] = i
-		case regexp.MustCompile(`(?i)^DSF_WALK_SEQ$`).MatchString(tCase(v)):
-			c[dsfwalkseq] = i
-		case regexp.MustCompile(`(?i)^Crrt$`).MatchString(tCase(v)):
-			c[crrt] = i
-		case regexp.MustCompile(`(?i)^KBB$`).MatchString(tCase(v)):
-			c[kbb] = i
+		case regexp.MustCompile(`(?i)cust.+id`).MatchString(v):
+			if _, ok := hdr["customerid"]; ok {
+				c[hdr["customerid"]] = i
+			}
+		case regexp.MustCompile(`(?i)ful.+me`).MatchString(v):
+			if _, ok := hdr["fullname"]; ok {
+				c[hdr["fullname"]] = i
+			}
+		case regexp.MustCompile(`(?i)fir.+me`).MatchString(v):
+			if _, ok := hdr["firstname"]; ok {
+				c[hdr["firstname"]] = i
+			}
+		case regexp.MustCompile(`(?i)^mi$`).MatchString(v):
+			if _, ok := hdr["mi"]; ok {
+				c[hdr["mi"]] = i
+			}
+		case regexp.MustCompile(`(?i)las.+me`).MatchString(v):
+			if _, ok := hdr["lastname"]; ok {
+				c[hdr["lastname"]] = i
+			}
+		case regexp.MustCompile(`(?i)addr.+1`).MatchString(v):
+			if _, ok := hdr["address1"]; ok {
+				c[hdr["address1"]] = i
+			}
+		case regexp.MustCompile(`(?i)addr.+2`).MatchString(v):
+			if _, ok := hdr["address2"]; ok {
+				c[hdr["address2"]] = i
+			}
+		case regexp.MustCompile(`(?i)^city$`).MatchString(v):
+			if _, ok := hdr["city"]; ok {
+				c[hdr["city"]] = i
+			}
+		case regexp.MustCompile(`(?i)^state$`).MatchString(v):
+			if _, ok := hdr["state"]; ok {
+				c[hdr["state"]] = i
+			}
+		case regexp.MustCompile(`(?i)^zip$`).MatchString(v):
+			if _, ok := hdr["zip"]; ok {
+				c[hdr["zip"]] = i
+			}
+		case regexp.MustCompile(`(?i)^4zip$`).MatchString(v):
+			if _, ok := hdr["zip4"]; ok {
+				c[hdr["zip4"]] = i
+			}
+		case regexp.MustCompile(`(?i)^zip4$`).MatchString(v):
+			if _, ok := hdr["zip4"]; ok {
+				c[hdr["zip4"]] = i
+			}
+		case regexp.MustCompile(`(?i)^hph$`).MatchString(v):
+			if _, ok := hdr["hph"]; ok {
+				c[hdr["hph"]] = i
+			}
+		case regexp.MustCompile(`(?i)^bph$`).MatchString(v):
+			if _, ok := hdr["bph"]; ok {
+				c[hdr["bph"]] = i
+			}
+		case regexp.MustCompile(`(?i)^cph$`).MatchString(v):
+			if _, ok := hdr["cph"]; ok {
+				c[hdr["cph"]] = i
+			}
+		case regexp.MustCompile(`(?i)^email$`).MatchString(v):
+			if _, ok := hdr["email"]; ok {
+				c[hdr["email"]] = i
+			}
+		case regexp.MustCompile(`(?i)^vin$`).MatchString(v):
+			if _, ok := hdr["vin"]; ok {
+				c[hdr["vin"]] = i
+			}
+		case regexp.MustCompile(`(?i)^year$`).MatchString(v):
+			if _, ok := hdr["year"]; ok {
+				c[hdr["year"]] = i
+			}
+		case regexp.MustCompile(`(?i)^vyr$`).MatchString(v):
+			if _, ok := hdr["year"]; ok {
+				c[hdr["year"]] = i
+			}
+		case regexp.MustCompile(`(?i)^make$`).MatchString(v):
+			if _, ok := hdr["make"]; ok {
+				c[hdr["make"]] = i
+			}
+		case regexp.MustCompile(`(?i)^vmk$`).MatchString(v):
+			if _, ok := hdr["make"]; ok {
+				c[hdr["make"]] = i
+			}
+		case regexp.MustCompile(`(?i)^model$`).MatchString(v):
+			if _, ok := hdr["model"]; ok {
+				c[hdr["model"]] = i
+			}
+		case regexp.MustCompile(`(?i)^vmd$`).MatchString(v):
+			if _, ok := hdr["model"]; ok {
+				c[hdr["model"]] = i
+			}
+		case regexp.MustCompile(`(?i)^DelDate$`).MatchString(v):
+			if _, ok := hdr["deldate"]; ok {
+				c[hdr["deldate"]] = i
+			}
+		case regexp.MustCompile(`(?i)^Date$`).MatchString(v):
+			if _, ok := hdr["date"]; ok {
+				c[hdr["date"]] = i
+			}
+		case regexp.MustCompile(`(?i)^DSF_WALK_SEQ$`).MatchString(v):
+			if _, ok := hdr["dsfwalkseq"]; ok {
+				c[hdr["dsfwalkseq"]] = i
+			}
+		case regexp.MustCompile(`(?i)^Crrt$`).MatchString(v):
+			if _, ok := hdr["crrt"]; ok {
+				c[hdr["crrt"]] = i
+			}
+		case regexp.MustCompile(`(?i)^KBB$`).MatchString(v):
+			if _, ok := hdr["kbb"]; ok {
+				c[hdr["kbb"]] = i
+			}
 		}
 	}
 	return c
@@ -757,85 +769,85 @@ func mapCol(r payload, m map[int]int, res resources) payload {
 	return r
 }
 
-func process(pay payload, res resources) payload {
+func process(pay payload, res resources, hdr map[string]int) payload {
 	for i, v := range pay.record {
 		switch i {
-		case state, mi, vin:
+		case hdr["state"], hdr["mi"], hdr["vin"]:
 			pay.record[i] = uCase(v)
-		case email:
+		case hdr["email"]:
 			pay.record[i] = lCase(v)
-		case hph, bph, cph:
+		case hdr["hph"], hdr["bph"], hdr["cph"]:
 			pay.record[i] = reformatPhone(v)
 		default:
 			pay.record[i] = tCase(v)
 		}
 	}
 	// Parse FullName if FirstName & LastName == ""
-	if pay.record[fullName] != "" && pay.record[firstName] == "" && pay.record[lastName] == "" {
-		pay.record[firstName], pay.record[mi], pay.record[lastName] = parseFullName(pay.record[fullName])
+	if pay.record[hdr["fullname"]] != "" && pay.record[hdr["firstname"]] == "" && pay.record[hdr["lastname"]] == "" {
+		pay.record[hdr["firstname"]], pay.record[hdr["mi"]], pay.record[hdr["lastname"]] = parseFullName(pay.record[hdr["fullname"]])
 	}
 	// Combine FirstName + LastName to FullName
-	if pay.record[fullName] == "" {
-		pay.record[fullName] = fmt.Sprintf("%v %v", pay.record[firstName], pay.record[lastName])
+	if pay.record[hdr["fullname"]] == "" {
+		pay.record[hdr["fullname"]] = fmt.Sprintf("%v %v", pay.record[hdr["firstname"]], pay.record[hdr["lastname"]])
 	}
 	// Combine address1 + Address2 to AddressFull
-	pay.record[addressFull] = fmt.Sprintf("%v %v", pay.record[address1], pay.record[address2])
+	pay.record[hdr["addressfull"]] = fmt.Sprintf("%v %v", pay.record[hdr["address1"]], pay.record[hdr["address2"]])
 	// Set Phone field based on availability of hph, bph & cph
 	switch {
-	case pay.record[hph] != "":
-		pay.record[phone] = pay.record[hph]
-	case pay.record[bph] != "":
-		pay.record[phone] = pay.record[bph]
-	case pay.record[cph] != "":
-		pay.record[phone] = pay.record[cph]
+	case pay.record[hdr["hph"]] != "":
+		pay.record[hdr["phone"]] = pay.record[hdr["hph"]]
+	case pay.record[hdr["bph"]] != "":
+		pay.record[hdr["phone"]] = pay.record[hdr["bph"]]
+	case pay.record[hdr["cph"]] != "":
+		pay.record[hdr["phone"]] = pay.record[hdr["cph"]]
 	}
 	// If Zip format is 92882-2341, split to Zip & Zip4
-	if len(pay.record[zip]) == 10 {
-		z := strings.Split(pay.record[zip], "-")
-		pay.record[zip], pay.record[zip4] = z[0], z[1]
+	if len(pay.record[hdr["zip"]]) == 10 {
+		z := strings.Split(pay.record[hdr["zip"]], "-")
+		pay.record[hdr["zip"]], pay.record[hdr["zip4"]] = z[0], z[1]
 	}
 	// Set VINlen
-	pay.record[vinLen] = fmt.Sprint(len(pay.record[vin]))
+	pay.record[hdr["vinlen"]] = fmt.Sprint(len(pay.record[hdr["vin"]]))
 	// Set ZipCrrt
-	pay.record[zipCrrt] = fmt.Sprintf("%v%v", pay.record[zip], pay.record[crrt])
+	pay.record[hdr["zipcrrt"]] = fmt.Sprintf("%v%v", pay.record[hdr["zip"]], pay.record[hdr["crrt"]])
 	// Validate Central Zipcode
 	_, okCzip := res.cord[valZipCode(strconv.Itoa(res.param.CentZip))]
 	if !okCzip {
 		log.Fatalln("Invalid Central Zip Code enter, please re-enter...")
 	}
 	// Validate Central record Zipcode
-	_, okRzip := res.cord[valZipCode(pay.record[zip])]
+	_, okRzip := res.cord[valZipCode(pay.record[hdr["zip"]])]
 	if !okRzip {
-		log.Printf("Invalid Zip Code on row %v, zip code %v (%v, %v) ", pay.counter, pay.record[zip], pay.record[city], pay.record[state])
+		log.Printf("Invalid Zip Code on row %v, zip code %v (%v, %v) ", pay.counter, pay.record[hdr["zip"]], pay.record[hdr["city"]], pay.record[hdr["state"]])
 	}
 	if okRzip && okCzip {
 		// Set Radius(miles) based on Central Zip and Row Zip
-		clat1, clon2, rlat1, rlon2 := getLatLong(strconv.Itoa(res.param.CentZip), pay.record[zip], res)
-		pay.record[radius] = fmt.Sprintf("%.2f", distance(clat1, clon2, rlat1, rlon2))
+		clat1, clon2, rlat1, rlon2 := getLatLong(strconv.Itoa(res.param.CentZip), pay.record[hdr["zip"]], res)
+		pay.record[hdr["radius"]] = fmt.Sprintf("%.2f", distance(clat1, clon2, rlat1, rlon2))
 		// Set Coordinte value
-		pay.record[coordinates] = fmt.Sprintf("%v,%v", rlat1, rlon2)
+		pay.record[hdr["coordinates"]] = fmt.Sprintf("%v,%v", rlat1, rlon2)
 	}
 	// Set DelDate, Date, Dld_Year, Dld_Month, Dld_Day
-	pay.record[delDate], pay.record[dldYear], pay.record[dldMonth], pay.record[dldDay] = parseDate(pay.record[delDate])
-	pay.record[date], pay.record[lsdYear], pay.record[lsdMonth], pay.record[lsdDay] = parseDate(pay.record[date])
+	pay.record[hdr["deldate"]], pay.record[hdr["dldyear"]], pay.record[hdr["dldmonth"]], pay.record[hdr["dldday"]] = parseDate(pay.record[hdr["deldate"]])
+	pay.record[hdr["date"]], pay.record[hdr["lsdyear"]], pay.record[hdr["lsdmonth"]], pay.record[hdr["lsdday"]] = parseDate(pay.record[hdr["date"]])
 	// Set Extended State Value
-	pay.record[expandedState] = decAbSt(pay.record[state])
+	pay.record[hdr["expandedstate"]] = decAbSt(pay.record[hdr["state"]])
 	// Set SCF value
-	pay.record[scf] = setSCF(pay.record[zip])
+	pay.record[hdr["scf"]] = setSCF(pay.record[hdr["zip"]])
 	// Set DDU Faculity
-	if ddufac, ok := res.dduFac[pay.record[zip]]; ok {
-		pay.record[dduFacility] = ddufac
+	if ddufac, ok := res.dduFac[pay.record[hdr["zip"]]]; ok {
+		pay.record[hdr["ddufacility"]] = ddufac
 	}
 	// Set SCF Faculity
-	if scffac, ok := res.scfFac[pay.record[scf]]; ok {
-		pay.record[scf3dFacility] = scffac
+	if scffac, ok := res.scfFac[pay.record[hdr["scf"]]]; ok {
+		pay.record[hdr["scf3dfacility"]] = scffac
 	}
 	// Set Ethnicity
-	if _, ok := res.hist[pay.record[lastName]]; ok {
-		pay.record[ethnicity] = "Hisp"
+	if _, ok := res.hist[pay.record[hdr["lastname"]]]; ok {
+		pay.record[hdr["ethnicity"]] = "Hisp"
 	}
 	// Set Vendor
-	pay.record[vendor] = res.param.Vendor
+	pay.record[hdr["vendor"]] = res.param.Vendor
 
 	return pay
 }
