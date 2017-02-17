@@ -169,10 +169,10 @@ func cInt(f string) int {
 
 func decYr(y string) string {
 	// YearDecodeDict is a map of 2-Digit abbreviated Years
-	yrDecDict := map[string]string{"0": "2000",
-		"1": "2001", "2": "2002", "3": "2003", "4": "2004", "5": "2005",
-		"6": "2006", "7": "2007", "8": "2008", "9": "2009", "10": "2010",
-		"11": "2011", "12": "2012", "13": "2013", "14": "2014", "15": "2015",
+	yrDecDict := map[string]string{"0": "2000", "1": "2001", "2": "2002",
+		"3": "2003", "4": "2004", "5": "2005", "6": "2006", "7": "2007",
+		"8": "2008", "9": "2009", "10": "2010", "11": "2011", "12": "2012",
+		"13": "2013", "14": "2014", "15": "2015",
 		"16": "2016", "17": "2017", "18": "2018", "19": "2019", "20": "2020",
 		"40": "1940", "41": "1941", "42": "1942", "43": "1943", "44": "1944",
 		"45": "1945", "46": "1946", "47": "1947", "48": "1948", "49": "1949",
@@ -781,6 +781,15 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 		default:
 			pay.record[i] = tCase(v)
 		}
+	}
+	// Set customerid
+	switch uCase(res.param.Source) {
+	case "D":
+		pay.record[hdr["customerid"]] = fmt.Sprintf("D%d", pay.counter+100000)
+	case "P":
+		pay.record[hdr["customerid"]] = fmt.Sprintf("P%d", pay.counter+500000)
+	default:
+		pay.record[hdr["customerid"]] = fmt.Sprintf("%06d", pay.counter)
 	}
 	// Parse FullName if FirstName & LastName == ""
 	if pay.record[hdr["fullname"]] != "" && pay.record[hdr["firstname"]] == "" && pay.record[hdr["lastname"]] == "" {
