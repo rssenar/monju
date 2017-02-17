@@ -11,12 +11,15 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 type initConfig struct {
@@ -89,6 +92,7 @@ func main() {
 		log.Fatalln("Error opening source file", err)
 	}
 	reader := csv.NewReader(file)
+	bar := pb.StartNew(rowCount(readDir()))
 
 	resource := resources{
 		param:  loadConfig(),
@@ -143,6 +147,7 @@ func main() {
 			for t := range tasks {
 				r := process(t, resource, hcm)
 				results <- r
+				bar.Increment()
 			}
 		}()
 	}
@@ -772,7 +777,7 @@ func mapCol(r payload, m map[int]int, res resources) payload {
 func process(pay payload, res resources, hdr map[string]int) payload {
 	for i, v := range pay.record {
 		switch i {
-		case hdr["state"], hdr["mi"], hdr["vin"]:
+		case hdr["state"], hdr["vin"]:
 			pay.record[i] = uCase(v)
 		case hdr["email"]:
 			pay.record[i] = lCase(v)
@@ -891,4 +896,18 @@ func addHeaderSup(s []string, res resources) []string {
 		}
 	}
 	return nr
+}
+
+func rowCount(fn string) int {
+	cmd := "wc"
+	args := []string{"-l", fn}
+	out, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		log.Fatalln("unable to run UNIX cmd", err)
+	}
+	int, err := strconv.Atoi(strings.Fields(string(out))[0])
+	if err != nil {
+		log.Fatalln("unable to conv []bytes", err)
+	}
+	return int
 }
