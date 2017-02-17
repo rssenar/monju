@@ -884,9 +884,7 @@ func outputCSV(out string, res resources, results <-chan payload) {
 }
 
 func rowCount(fn string) int {
-	cmd := "wc"
-	args := []string{"-l", fn}
-	out, err := exec.Command(cmd, args...).Output()
+	out, err := exec.Command("wc", "-l", fn).Output()
 	if err != nil {
 		log.Fatalln("unable to run UNIX cmd", err)
 	}
