@@ -52,31 +52,6 @@ type resources struct {
 	genSNm map[string]int
 }
 
-func readDir() string {
-	files, err := ioutil.ReadDir(".")
-	if err != nil {
-		log.Fatalln("Error reading Directory", err)
-	}
-	var f []string
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".csv" {
-			f = append(f, file.Name())
-		}
-	}
-	if len(f) > 1 {
-		log.Fatalln("Error.. directory must contain only a single .csv file")
-	}
-	return f[0]
-}
-
-func constHeaderMap(h []string) map[string]int {
-	header := make(map[string]int)
-	for i, v := range h {
-		header[lCase(v)] = i
-	}
-	return header
-}
-
 func main() {
 	start := time.Now()
 	var (
@@ -893,4 +868,29 @@ func rowCount(fn string) int {
 		log.Fatalln("unable to conv []bytes", err)
 	}
 	return int
+}
+
+func readDir() string {
+	files, err := ioutil.ReadDir(".")
+	if err != nil {
+		log.Fatalln("Error reading Directory", err)
+	}
+	var f []string
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".csv" {
+			f = append(f, file.Name())
+		}
+	}
+	if len(f) > 1 {
+		log.Fatalln("Error.. directory must contain only a single .csv file")
+	}
+	return f[0]
+}
+
+func constHeaderMap(h []string) map[string]int {
+	header := make(map[string]int)
+	for i, v := range h {
+		header[lCase(v)] = i
+	}
+	return header
 }
