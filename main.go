@@ -883,21 +883,6 @@ func outputCSV(out string, res resources, results <-chan payload) {
 	w.Flush()
 }
 
-func addHeaderSup(s []string, res resources) []string {
-	head := make(map[string]int)
-	for _, v := range res.param.Headers {
-		head[tCase(v)] = head[tCase(v)] + 1
-	}
-	var nr []string
-	nr = append(nr, res.param.Headers...)
-	for _, v := range s {
-		if _, ok := head[tCase(v)]; !ok {
-			nr = append(nr, tCase(v))
-		}
-	}
-	return nr
-}
-
 func rowCount(fn string) int {
 	cmd := "wc"
 	args := []string{"-l", fn}
