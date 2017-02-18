@@ -909,7 +909,7 @@ func constHeaderMap(h []string) map[string]int {
 	if len(h) == 51 {
 		for _, v := range h {
 			if _, ok := defheaders[lCase(v)]; !ok {
-				fmt.Println("[ Incompatible headers, using default headers ]")
+				log.Println("[ Incompatible headers, using default headers ]")
 				return defheaders
 			}
 			header := make(map[string]int)
@@ -919,6 +919,6 @@ func constHeaderMap(h []string) map[string]int {
 			return header
 		}
 	}
-	fmt.Println("[ Missing required headers, using default headers ]")
+	log.Println("[ Missing required headers, using default headers ]")
 	return defheaders
 }
