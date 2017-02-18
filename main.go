@@ -1,4 +1,3 @@
-// Program for processing CSV files
 package main
 
 import (
@@ -152,20 +151,20 @@ func decYr(y string) string {
 	yrDecDict := map[string]string{"0": "2000", "1": "2001", "2": "2002",
 		"3": "2003", "4": "2004", "5": "2005", "6": "2006", "7": "2007",
 		"8": "2008", "9": "2009", "10": "2010", "11": "2011", "12": "2012",
-		"13": "2013", "14": "2014", "15": "2015",
-		"16": "2016", "17": "2017", "18": "2018", "19": "2019", "20": "2020",
-		"40": "1940", "41": "1941", "42": "1942", "43": "1943", "44": "1944",
-		"45": "1945", "46": "1946", "47": "1947", "48": "1948", "49": "1949",
-		"50": "1950", "51": "1951", "52": "1952", "53": "1953", "54": "1954",
-		"55": "1955", "56": "1956", "57": "1957", "58": "1958", "59": "1959",
-		"60": "1960", "61": "1961", "62": "1962", "63": "1963", "64": "1964",
-		"65": "1965", "66": "1966", "67": "1967", "68": "1968", "69": "1969",
-		"70": "1970", "71": "1971", "72": "1972", "73": "1973", "74": "1974",
-		"75": "1975", "76": "1976", "77": "1977", "78": "1978", "79": "1979",
-		"80": "1980", "81": "1981", "82": "1982", "83": "1983", "84": "1984",
-		"85": "1985", "86": "1986", "87": "1987", "88": "1988", "89": "1989",
-		"90": "1990", "91": "1991", "92": "1992", "93": "1993", "94": "1994",
-		"95": "1995", "96": "1996", "97": "1997", "98": "1998", "99": "1999"}
+		"13": "2013", "14": "2014", "15": "2015", "16": "2016", "17": "2017",
+		"18": "2018", "19": "2019", "20": "2020", "40": "1940", "41": "1941",
+		"42": "1942", "43": "1943", "44": "1944", "45": "1945", "46": "1946",
+		"47": "1947", "48": "1948", "49": "1949", "50": "1950", "51": "1951",
+		"52": "1952", "53": "1953", "54": "1954", "55": "1955", "56": "1956",
+		"57": "1957", "58": "1958", "59": "1959", "60": "1960", "61": "1961",
+		"62": "1962", "63": "1963", "64": "1964", "65": "1965", "66": "1966",
+		"67": "1967", "68": "1968", "69": "1969", "70": "1970", "71": "1971",
+		"72": "1972", "73": "1973", "74": "1974", "75": "1975", "76": "1976",
+		"77": "1977", "78": "1978", "79": "1979", "80": "1980", "81": "1981",
+		"82": "1982", "83": "1983", "84": "1984", "85": "1985", "86": "1986",
+		"87": "1987", "88": "1988", "89": "1989", "90": "1990", "91": "1991",
+		"92": "1992", "93": "1993", "94": "1994", "95": "1995", "96": "1996",
+		"97": "1997", "98": "1998", "99": "1999"}
 	if dy, ok := yrDecDict[y]; ok {
 		return dy
 	}
@@ -491,7 +490,8 @@ func getLatLong(cZip, rZip string, res resources) (float64, float64, float64, fl
 
 func parseDate(d string) (string, string, string, string) {
 	if d != "" {
-		formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06", "2006/1/2", "2006-1-2"}
+		formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06",
+			"2006/1/2", "2006-1-2"}
 		for _, f := range formats {
 			if t, err := time.Parse(f, d); err == nil {
 				nDate := fmt.Sprintf("%v/%v/%v", strconv.Itoa(t.Year()), strconv.Itoa(int(t.Month())), strconv.Itoa(t.Day()))
@@ -503,10 +503,11 @@ func parseDate(d string) (string, string, string, string) {
 }
 
 func checkSalut(f string) bool {
-	salutations := []string{"MR", "MR.", "MS", "MS.", "MRS", "MRS.", "DR", "DR.", "MISS",
-		"CORP", "SGT", "PVT", "CAPT", "COL", "MAJ", "LT", "LIEUTENANT", "PRM",
-		"PATROLMAN", "HON", "OFFICER", "REV", "PRES", "PRESIDENT", "GOV", "GOVERNOR",
-		"VICE PRESIDENT", "VP", "MAYOR", "SIR", "MADAM", "HONORABLE"}
+	salutations := []string{"MR", "MR.", "MS", "MS.", "MRS", "MRS.", "DR",
+		"DR.", "MISS", "CORP", "SGT", "PVT", "CAPT", "COL", "MAJ", "LT",
+		"LIEUTENANT", "PRM", "PATROLMAN", "HON", "OFFICER", "REV", "PRES",
+		"PRESIDENT", "GOV", "GOVERNOR", "VICE PRESIDENT", "VP", "MAYOR",
+		"SIR", "MADAM", "HONORABLE"}
 	for _, salu := range salutations {
 		if tCase(f) == tCase(salu) {
 			return true
@@ -536,11 +537,13 @@ func checkSuf(f string) bool {
 }
 
 func checklnPref(f string) bool {
-	lnPrefixes := []string{"DE", "DA", "DI", "LA", "LOS", "DU", "DEL", "DEI", "VDA", "DELLO", "DELLA",
-		"DEGLI", "DELLE", "VAN", "VON", "DER", "DEN", "MC", "HEER", "TEN", "TER", "VANDE", "VANDEN",
-		"VANDER", "VOOR", "VER", "AAN", "MC", "SAN", "SAINZ", "BIN", "LI", "LE", "DES",
-		"AM", "AUS'M", "VOM", "ZUM", "ZUR", "TEN", "IBN", "ABUa", "BON", "BIN", "DAL",
-		"DER", "IBN", "LE", "ST", "STE", "VAN", "VEL", "VON"}
+	lnPrefixes := []string{"DE", "DA", "DI", "LA", "LOS", "DU", "DEL",
+		"DEI", "VDA", "DELLO", "DELLA", "DEGLI", "DELLE", "VAN", "VON",
+		"DER", "DEN", "MC", "HEER", "TEN", "TER", "VANDE", "VANDEN",
+		"VANDER", "VOOR", "VER", "AAN", "MC", "SAN", "SAINZ", "BIN", "LI",
+		"LE", "DES", "AM", "AUS'M", "VOM", "ZUM", "ZUR", "TEN", "IBN",
+		"ABUa", "BON", "BIN", "DAL", "DER", "IBN", "LE", "ST", "STE", "VAN",
+		"VEL", "VON"}
 	for _, pref := range lnPrefixes {
 		if tCase(f) == tCase(pref) {
 			return true
@@ -550,9 +553,10 @@ func checklnPref(f string) bool {
 }
 
 func checkGener(f string) bool {
-	generations := []string{"JR", "SR", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX",
-		"X", "1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH", "9TH", "10TH", "FIRST",
-		"SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "NINTH", "TENTH"}
+	generations := []string{"JR", "SR", "I", "II", "III", "IV", "V", "VI",
+		"VII", "VIII", "IX", "X", "1ST", "2ND", "3RD", "4TH", "5TH", "6TH",
+		"7TH", "8TH", "9TH", "10TH", "FIRST", "SECOND", "THIRD", "FOURTH",
+		"FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "NINTH", "TENTH"}
 	for _, gen := range generations {
 		if tCase(f) == tCase(gen) {
 			return true
@@ -837,7 +841,7 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	}
 	// Set Vendor
 	pay.record[hdr["vendor"]] = res.param.Vendor
-
+	// Return modified slice
 	return pay
 }
 
@@ -888,24 +892,22 @@ func readDir() string {
 }
 
 func constHeaderMap(h []string) map[string]int {
-	defheaders := map[string]int{
-		"customerid": 0, "fullname": 1, "firstname": 2, "mi": 3,
-		"lastname": 4, "address1": 5, "address2": 6, "addressfull": 7,
-		"city": 8, "state": 9, "zip": 10, "zip4": 11,
-		"scf": 12, "phone": 13, "hph": 14, "bph": 15,
-		"cph": 16, "email": 17, "vin": 18, "year": 19,
-		"make": 20, "model": 21, "deldate": 22, "date": 23,
-		"radius": 24, "coordinates": 25, "vinlen": 26, "dsfwalkseq": 27,
-		"crrt": 28, "zipcrrt": 29, "KBB": 30, "buybackvalue": 31,
-		"winnum": 32, "maildnq": 33, "blitzdnq": 34, "drop": 35,
-		"purl": 36, "ddufacility": 37, "scf3dfacility": 38, "vendor": 39,
-		"expandedstate": 40, "ethnicity": 41, "dldyear": 42, "dldmonth": 43,
-		"dldday": 44, "lsdyear": 45, "lsdmonth": 46, "lsdday": 47,
-		"misc1": 48, "misc2": 49, "misc3": 50}
+	defheaders := map[string]int{"customerid": 0, "fullname": 1,
+		"firstname": 2, "mi": 3, "lastname": 4, "address1": 5, "address2": 6,
+		"addressfull": 7, "city": 8, "state": 9, "zip": 10, "zip4": 11,
+		"scf": 12, "phone": 13, "hph": 14, "bph": 15, "cph": 16, "email": 17,
+		"vin": 18, "year": 19, "make": 20, "model": 21, "deldate": 22,
+		"date": 23, "radius": 24, "coordinates": 25, "vinlen": 26,
+		"dsfwalkseq": 27, "crrt": 28, "zipcrrt": 29, "KBB": 30,
+		"buybackvalue": 31, "winnum": 32, "maildnq": 33, "blitzdnq": 34,
+		"drop": 35, "purl": 36, "ddufacility": 37, "scf3dfacility": 38,
+		"vendor": 39, "expandedstate": 40, "ethnicity": 41, "dldyear": 42,
+		"dldmonth": 43, "dldday": 44, "lsdyear": 45, "lsdmonth": 46,
+		"lsdday": 47, "misc1": 48, "misc2": 49, "misc3": 50}
 	if len(h) == 51 {
 		for _, v := range h {
 			if _, ok := defheaders[lCase(v)]; !ok {
-				fmt.Println("[ Incompatible header... using default headers ]")
+				fmt.Println("[ Incompatible headers, using default headers ]")
 				return defheaders
 			}
 			header := make(map[string]int)
@@ -915,6 +917,6 @@ func constHeaderMap(h []string) map[string]int {
 			return header
 		}
 	}
-	fmt.Println("[ Missing required headers... using default headers ]")
+	fmt.Println("[ Missing required headers, using default headers ]")
 	return defheaders
 }
