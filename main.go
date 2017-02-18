@@ -54,14 +54,13 @@ type resources struct {
 func main() {
 	start := time.Now()
 	gophers := flag.Int("C", 1, "Set workers to run in parallel")
+	flag.Parse()
 	for _, v := range readDir() {
 		var (
 			counter int
 			outfile = fmt.Sprintf("%v_output.csv", v[:len(v)-4])
 			colMap  map[int]int
 		)
-		flag.Parse()
-
 		bar := pb.StartNew(rowCount(v))
 
 		file, err := os.Open(v)
@@ -80,7 +79,6 @@ func main() {
 			genS:   loadGenS(),
 			genSNm: loadGenSNm(),
 		}
-
 		hcm := constHeaderMap(resource.param.Headers)
 
 		tasks := make(chan payload)
