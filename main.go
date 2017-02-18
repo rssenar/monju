@@ -53,80 +53,83 @@ type resources struct {
 
 func main() {
 	start := time.Now()
-	bar := pb.StartNew(rowCount(readDir()))
-	var (
-		counter int
-		gophers = flag.Int("C", 1, "Workers to run in parallel")
-		outfile = fmt.Sprintf("%v_output.csv", readDir()[:len(readDir())-4])
-		colMap  map[int]int
-	)
-	flag.Parse()
+	gophers := flag.Int("C", 1, "Set workers to run in parallel")
+	for _, v := range readDir() {
+		var (
+			counter int
+			outfile = fmt.Sprintf("%v_output.csv", v[:len(v)-4])
+			colMap  map[int]int
+		)
+		flag.Parse()
 
-	file, err := os.Open(readDir())
-	if err != nil {
-		log.Fatalln("Error opening source file", err)
-	}
-	reader := csv.NewReader(file)
+		bar := pb.StartNew(rowCount(v))
 
-	resource := resources{
-		param:  loadConfig(),
-		cord:   loadZipCor(),
-		scfFac: loadSCFFac(),
-		dduFac: loadDDUFac(),
-		hist:   loadHist(),
-		dnm:    loadDNM(),
-		genS:   loadGenS(),
-		genSNm: loadGenSNm(),
-	}
-
-	hcm := constHeaderMap(resource.param.Headers)
-
-	tasks := make(chan payload)
-	go func() {
-		for i := 0; ; i++ {
-			counter = i
-			row, err := reader.Read()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				log.Fatalln("Error reading source row", err)
-			}
-			if i == 0 {
-				colMap = setCol(payload{
-					counter: i,
-					record:  row,
-				}, hcm)
-			} else {
-				tasks <- mapCol(payload{
-					counter: i,
-					record:  row,
-				}, colMap, resource)
-			}
+		file, err := os.Open(v)
+		if err != nil {
+			log.Fatalln("Error opening source file", err)
 		}
-		close(tasks)
-	}()
+		reader := csv.NewReader(file)
 
-	results := make(chan payload)
-	var wg sync.WaitGroup
-	wg.Add(*gophers)
+		resource := resources{
+			param:  loadConfig(),
+			cord:   loadZipCor(),
+			scfFac: loadSCFFac(),
+			dduFac: loadDDUFac(),
+			hist:   loadHist(),
+			dnm:    loadDNM(),
+			genS:   loadGenS(),
+			genSNm: loadGenSNm(),
+		}
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+		hcm := constHeaderMap(resource.param.Headers)
 
-	for i := 0; i < *gophers; i++ {
+		tasks := make(chan payload)
 		go func() {
-			defer wg.Done()
-			for t := range tasks {
-				r := process(t, resource, hcm)
-				results <- r
-				bar.Increment()
+			for i := 0; ; i++ {
+				counter = i
+				row, err := reader.Read()
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					log.Fatalln("Error reading source row", err)
+				}
+				if i == 0 {
+					colMap = setCol(payload{
+						counter: i,
+						record:  row,
+					}, hcm)
+				} else {
+					tasks <- mapCol(payload{
+						counter: i,
+						record:  row,
+					}, colMap, resource)
+				}
 			}
+			close(tasks)
 		}()
+
+		results := make(chan payload)
+		var wg sync.WaitGroup
+		wg.Add(*gophers)
+
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		for i := 0; i < *gophers; i++ {
+			go func() {
+				defer wg.Done()
+				for t := range tasks {
+					r := process(t, resource, hcm)
+					results <- r
+					bar.Increment()
+				}
+			}()
+		}
+		outputCSV(outfile, resource, results)
+		fmt.Printf("Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 	}
-	outputCSV(outfile, resource, results)
-	fmt.Printf("Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 }
 
 func tCase(f string) string {
@@ -874,7 +877,7 @@ func rowCount(fn string) int {
 	return int
 }
 
-func readDir() string {
+func readDir() []string {
 	files, err := ioutil.ReadDir(".")
 	if err != nil {
 		log.Fatalln("Error reading Directory", err)
@@ -885,12 +888,10 @@ func readDir() string {
 			f = append(f, file.Name())
 		}
 	}
-	if len(f) > 1 {
-		log.Fatalln("Directory must contain only one .csv file")
-	} else if len(f) < 1 {
+	if len(f) < 1 {
 		log.Fatalln("Directory does not contain a .csv file")
 	}
-	return f[0]
+	return f
 }
 
 func constHeaderMap(h []string) map[string]int {
