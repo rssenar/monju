@@ -62,7 +62,6 @@ func main() {
 			colMap  map[int]int
 		)
 		bar := pb.StartNew(rowCount(v))
-
 		file, err := os.Open(v)
 		if err != nil {
 			log.Fatalln("Error opening source file", err)
