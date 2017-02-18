@@ -55,6 +55,7 @@ func main() {
 	start := time.Now()
 	gophers := flag.Int("C", 1, "Set workers to run in parallel")
 	flag.Parse()
+
 	for _, v := range readDir() {
 		var (
 			counter int
@@ -621,6 +622,7 @@ func parseFullName(fn string) (string, string, string) {
 }
 
 func setCol(r payload, hdr map[string]int) map[int]int {
+	hasZip := false
 	c := make(map[int]int)
 	for i, v := range r.record {
 		switch {
@@ -664,6 +666,7 @@ func setCol(r payload, hdr map[string]int) map[int]int {
 			if _, ok := hdr["zip"]; ok {
 				c[hdr["zip"]] = i
 			}
+			hasZip = true
 		case regexp.MustCompile(`(?i)^4zip$`).MatchString(v):
 			if _, ok := hdr["zip4"]; ok {
 				c[hdr["zip4"]] = i
@@ -737,6 +740,9 @@ func setCol(r payload, hdr map[string]int) map[int]int {
 				c[hdr["kbb"]] = i
 			}
 		}
+	}
+	if hasZip == false {
+		log.Fatalln("ERROR: ZIP code is a requried field")
 	}
 	return c
 }
