@@ -54,9 +54,10 @@ type resources struct {
 
 func main() {
 	start := time.Now()
+	bar := pb.StartNew(rowCount(readDir()))
 	var (
 		counter int
-		gophers = flag.Int("gophers", 1, "Workers to run in parallel")
+		gophers = flag.Int("C", 1, "Workers to run in parallel")
 		outfile = fmt.Sprintf("%v_output.csv", readDir()[:len(readDir())-4])
 		colMap  map[int]int
 	)
@@ -67,7 +68,6 @@ func main() {
 		log.Fatalln("Error opening source file", err)
 	}
 	reader := csv.NewReader(file)
-	bar := pb.StartNew(rowCount(readDir()))
 
 	resource := resources{
 		param:  loadConfig(),
@@ -888,9 +888,33 @@ func readDir() string {
 }
 
 func constHeaderMap(h []string) map[string]int {
-	header := make(map[string]int)
-	for i, v := range h {
-		header[lCase(v)] = i
+	defheaders := map[string]int{
+		"customerid": 0, "fullname": 1, "firstname": 2, "mi": 3,
+		"lastname": 4, "address1": 5, "address2": 6, "addressfull": 7,
+		"city": 8, "state": 9, "zip": 10, "zip4": 11,
+		"scf": 12, "phone": 13, "hph": 14, "bph": 15,
+		"cph": 16, "email": 17, "vin": 18, "year": 19,
+		"make": 20, "model": 21, "deldate": 22, "date": 23,
+		"radius": 24, "coordinates": 25, "vinlen": 26, "dsfwalkseq": 27,
+		"crrt": 28, "zipcrrt": 29, "KBB": 30, "buybackvalue": 31,
+		"winnum": 32, "maildnq": 33, "blitzdnq": 34, "drop": 35,
+		"purl": 36, "ddufacility": 37, "scf3dfacility": 38, "vendor": 39,
+		"expandedstate": 40, "ethnicity": 41, "dldyear": 42, "dldmonth": 43,
+		"dldday": 44, "lsdyear": 45, "lsdmonth": 46, "lsdday": 47,
+		"misc1": 48, "misc2": 49, "misc3": 50}
+	if len(h) == 51 {
+		for _, v := range h {
+			if _, ok := defheaders[lCase(v)]; !ok {
+				fmt.Println("[ Incompatible header... using default headers ]")
+				return defheaders
+			}
+			header := make(map[string]int)
+			for i, v := range h {
+				header[lCase(v)] = i
+			}
+			return header
+		}
 	}
-	return header
+	fmt.Println("[ Missing required headers... using default headers ]")
+	return defheaders
 }
