@@ -886,7 +886,9 @@ func readDir() string {
 		}
 	}
 	if len(f) > 1 {
-		log.Fatalln("Error.. directory must contain only a single .csv file")
+		log.Fatalln("Directory must contain only one .csv file")
+	} else if len(f) < 1 {
+		log.Fatalln("Directory does not contain a .csv file")
 	}
 	return f[0]
 }
