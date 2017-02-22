@@ -210,6 +210,36 @@ func setSCF(s string) string {
 	return ""
 }
 
+func valPhone(p string) string {
+	switch {
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9]$`).MatchString(p):
+		return p
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$`).MatchString(p):
+		return p[:5]
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$`).MatchString(p):
+		x := strings.Split(p, "-")
+		return x[0]
+	}
+	return ""
+}
+
+func reformatPhone(p string) string {
+	sep := []string{"-", ".", "*", "(", ")"}
+	for _, v := range sep {
+		p = strings.Replace(p, v, "", -1)
+	}
+	p = strings.Replace(p, " ", "", -1)
+	switch len(p) {
+	case 10:
+		p = fmt.Sprintf("(%v) %v-%v", p[0:3], p[3:6], p[6:10])
+	case 7:
+		p = fmt.Sprintf("%v-%v", p[0:3], p[3:7])
+	default:
+		p = ""
+	}
+	return p
+}
+
 func loadConfig() initConfig {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -428,23 +458,6 @@ func loadGenSNm() map[string]int {
 		gen[fnln] = gen[fnln] + 1
 	}
 	return gen
-}
-
-func reformatPhone(p string) string {
-	sep := []string{"-", ".", "*", "(", ")"}
-	for _, v := range sep {
-		p = strings.Replace(p, v, "", -1)
-	}
-	p = strings.Replace(p, " ", "", -1)
-	switch len(p) {
-	case 10:
-		p = fmt.Sprintf("(%v) %v-%v", p[0:3], p[3:6], p[6:10])
-	case 7:
-		p = fmt.Sprintf("%v-%v", p[0:3], p[3:7])
-	default:
-		p = ""
-	}
-	return p
 }
 
 func hsin(theta float64) float64 {
@@ -800,11 +813,6 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	case pay.record[hdr["cph"]] != "":
 		pay.record[hdr["phone"]] = pay.record[hdr["cph"]]
 	}
-	// If Zip format is 92882-2341, split to Zip & Zip4
-	if len(pay.record[hdr["zip"]]) == 10 {
-		z := strings.Split(pay.record[hdr["zip"]], "-")
-		pay.record[hdr["zip"]], pay.record[hdr["zip4"]] = z[0], z[1]
-	}
 	// Set VINlen
 	pay.record[hdr["vinlen"]] = fmt.Sprint(len(pay.record[hdr["vin"]]))
 	// Set ZipCrrt
@@ -814,7 +822,9 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	if !okCzip {
 		log.Fatalln("Invalid Central Zip Code enter, please re-enter...")
 	}
-	// Validate Central record Zipcode
+	// Check Zip Code validity
+	pay.record[hdr["zip"]] = valPhone(pay.record[hdr["zip"]])
+	// Validate record Zipcode
 	_, okRzip := res.cord[valZipCode(pay.record[hdr["zip"]])]
 	if !okRzip {
 		log.Printf("Invalid Zip Code on row %v, zip code %v (%v, %v) ", pay.counter, pay.record[hdr["zip"]], pay.record[hdr["city"]], pay.record[hdr["state"]])
