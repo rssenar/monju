@@ -210,9 +210,15 @@ func setSCF(s string) string {
 	return ""
 }
 
-func valPhone(p string) string {
+func valZip(p string) string {
 	switch {
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9]$`).MatchString(p):
+		return p
 	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9]$`).MatchString(p):
+		if p[:1] == "0" {
+			p = p[1:]
+			return p
+		}
 		return p
 	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$`).MatchString(p):
 		return p[:5]
@@ -478,19 +484,11 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 	return 2 * rad * math.Asin(math.Sqrt(h))
 }
 
-func valZipCode(z string) string {
-	if z[:1] == "0" {
-		z = z[1:]
-		return z
-	}
-	return z
-}
-
 func getLatLong(cZip, rZip string, res resources) (float64, float64, float64, float64) {
 	// Validate Record ZIP
-	recCor := res.cord[valZipCode(rZip)]
+	recCor := res.cord[rZip]
 	// Validate Central ZIP
-	cenCor := res.cord[valZipCode(cZip)]
+	cenCor := res.cord[cZip]
 	// convert Coordinates tin FLoat64
 	lat1, err := strconv.ParseFloat(cenCor[0], 64)
 	lon1, err := strconv.ParseFloat(cenCor[1], 64)
@@ -794,16 +792,20 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	default:
 		pay.record[hdr["customerid"]] = fmt.Sprintf("%06d", pay.counter)
 	}
+
 	// Parse FullName if FirstName & LastName == ""
 	if pay.record[hdr["fullname"]] != "" && pay.record[hdr["firstname"]] == "" && pay.record[hdr["lastname"]] == "" {
 		pay.record[hdr["firstname"]], pay.record[hdr["mi"]], pay.record[hdr["lastname"]] = parseFullName(pay.record[hdr["fullname"]])
 	}
+
 	// Combine FirstName + LastName to FullName
 	if pay.record[hdr["fullname"]] == "" {
 		pay.record[hdr["fullname"]] = fmt.Sprintf("%v %v", pay.record[hdr["firstname"]], pay.record[hdr["lastname"]])
 	}
+
 	// Combine address1 + Address2 to AddressFull
 	pay.record[hdr["addressfull"]] = fmt.Sprintf("%v %v", pay.record[hdr["address1"]], pay.record[hdr["address2"]])
+
 	// Set Phone field based on availability of hph, bph & cph
 	switch {
 	case pay.record[hdr["hph"]] != "":
@@ -817,15 +819,14 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	pay.record[hdr["vinlen"]] = fmt.Sprint(len(pay.record[hdr["vin"]]))
 	// Set ZipCrrt
 	pay.record[hdr["zipcrrt"]] = fmt.Sprintf("%v%v", pay.record[hdr["zip"]], pay.record[hdr["crrt"]])
+
 	// Validate Central Zipcode
-	_, okCzip := res.cord[valZipCode(strconv.Itoa(res.param.CentZip))]
+	_, okCzip := res.cord[valZip(strconv.Itoa(res.param.CentZip))]
 	if !okCzip {
-		log.Fatalln("Invalid Central Zip Code enter, please re-enter...")
+		log.Fatalln("Invalid Central Zip Code")
 	}
-	// Check Zip Code validity
-	pay.record[hdr["zip"]] = valPhone(pay.record[hdr["zip"]])
 	// Validate record Zipcode
-	_, okRzip := res.cord[valZipCode(pay.record[hdr["zip"]])]
+	_, okRzip := res.cord[valZip(pay.record[hdr["zip"]])]
 	if !okRzip {
 		log.Printf("Invalid Zip Code on row %v, zip code %v (%v, %v) ", pay.counter, pay.record[hdr["zip"]], pay.record[hdr["city"]], pay.record[hdr["state"]])
 	}
@@ -836,27 +837,35 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 		// Set Coordinte value
 		pay.record[hdr["coordinates"]] = fmt.Sprintf("%v,%v", rlat1, rlon2)
 	}
+
 	// Set DelDate, Date, Dld_Year, Dld_Month, Dld_Day
 	pay.record[hdr["deldate"]], pay.record[hdr["dldyear"]], pay.record[hdr["dldmonth"]], pay.record[hdr["dldday"]] = parseDate(pay.record[hdr["deldate"]])
 	pay.record[hdr["date"]], pay.record[hdr["lsdyear"]], pay.record[hdr["lsdmonth"]], pay.record[hdr["lsdday"]] = parseDate(pay.record[hdr["date"]])
+
 	// Set Extended State Value
 	pay.record[hdr["expandedstate"]] = decAbSt(pay.record[hdr["state"]])
+
 	// Set SCF value
 	pay.record[hdr["scf"]] = setSCF(pay.record[hdr["zip"]])
+
 	// Set DDU Faculity
 	if ddufac, ok := res.dduFac[pay.record[hdr["zip"]]]; ok {
 		pay.record[hdr["ddufacility"]] = ddufac
 	}
+
 	// Set SCF Faculity
 	if scffac, ok := res.scfFac[pay.record[hdr["scf"]]]; ok {
 		pay.record[hdr["scf3dfacility"]] = scffac
 	}
+
 	// Set Ethnicity
 	if _, ok := res.hist[pay.record[hdr["lastname"]]]; ok {
 		pay.record[hdr["ethnicity"]] = "Hisp"
 	}
+
 	// Set Vendor
 	pay.record[hdr["vendor"]] = res.param.Vendor
+
 	// Return modified slice
 	return pay
 }
