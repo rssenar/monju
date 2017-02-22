@@ -52,8 +52,12 @@ type resources struct {
 }
 
 func main() {
+	munger()
+}
+
+func munger() {
 	start := time.Now()
-	gophers := flag.Int("C", 1, "Set workers to run in parallel")
+	gophers := flag.Int("C", 10, "Set workers to run in parallel")
 	flag.Parse()
 
 	for _, v := range readDir() {
@@ -486,9 +490,15 @@ func distance(lat1, lon1, lat2, lon2 float64) float64 {
 
 func getLatLong(cZip, rZip string, res resources) (float64, float64, float64, float64) {
 	// Validate Record ZIP
-	recCor := res.cord[rZip]
+	recCor, OKrZip := res.cord[rZip]
+	if !OKrZip {
+		log.Printf("Invalid Record Zip Code : %v", rZip)
+	}
 	// Validate Central ZIP
-	cenCor := res.cord[cZip]
+	cenCor, OKcZip := res.cord[cZip]
+	if !OKcZip {
+		log.Printf("Invalid Central Zip Code : %v", cZip)
+	}
 	// convert Coordinates tin FLoat64
 	lat1, err := strconv.ParseFloat(cenCor[0], 64)
 	lon1, err := strconv.ParseFloat(cenCor[1], 64)
@@ -825,8 +835,10 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	if !okCzip {
 		log.Fatalln("Invalid Central Zip Code")
 	}
+	// Standardize Zipcode
+	pay.record[hdr["zip"]] = valZip(pay.record[hdr["zip"]])
 	// Validate record Zipcode
-	_, okRzip := res.cord[valZip(pay.record[hdr["zip"]])]
+	_, okRzip := res.cord[pay.record[hdr["zip"]]]
 	if !okRzip {
 		log.Printf("Invalid Zip Code on row %v, zip code %v (%v, %v) ", pay.counter, pay.record[hdr["zip"]], pay.record[hdr["city"]], pay.record[hdr["state"]])
 	}
