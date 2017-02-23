@@ -21,6 +21,11 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
+type payload struct {
+	counter int
+	record  []string
+}
+
 type initConfig struct {
 	CentZip         int
 	MaxRadius       int
@@ -33,11 +38,6 @@ type initConfig struct {
 	DelBlankDATE    bool
 	DelBlankDELDATE bool
 	Headers         []string
-}
-
-type payload struct {
-	counter int
-	record  []string
 }
 
 type resources struct {
@@ -123,13 +123,12 @@ func munger() {
 			go func() {
 				defer wg.Done()
 				for t := range tasks {
-					r := process(t, resource, hcm)
-					results <- r
+					results <- process(t, resource, hcm)
 					bar.Increment()
 				}
 			}()
 		}
-		outputCSV(outfile, resource, results)
+		outputCSV(outfile, resource, results, hcm)
 		fmt.Printf("Elapsed Time: %v, Total: %v\n", time.Since(start), counter)
 	}
 }
@@ -149,6 +148,9 @@ func cInt(f string) int {
 		log.Fatalf("Error converting string to int %v (%v)", err, f)
 	}
 	return i
+}
+func stdAddress(f string) string {
+	return strings.Title(strings.ToLower(strings.Join(strings.Fields(f), " ")))
 }
 
 func decYr(y string) string {
@@ -667,6 +669,10 @@ func setCol(r payload, hdr map[string]int) map[int]int {
 			if _, ok := hdr["lastname"]; ok {
 				c[hdr["lastname"]] = i
 			}
+		case regexp.MustCompile(`(?i)^address$`).MatchString(v):
+			if _, ok := hdr["address1"]; ok {
+				c[hdr["address1"]] = i
+			}
 		case regexp.MustCompile(`(?i)addr.+1`).MatchString(v):
 			if _, ok := hdr["address1"]; ok {
 				c[hdr["address1"]] = i
@@ -789,6 +795,8 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 			pay.record[i] = lCase(v)
 		case hdr["hph"], hdr["bph"], hdr["cph"]:
 			pay.record[i] = reformatPhone(v)
+		case hdr["address1"], hdr["address2"]:
+			pay.record[i] = stdAddress(v)
 		default:
 			pay.record[i] = tCase(v)
 		}
@@ -878,11 +886,10 @@ func process(pay payload, res resources, hdr map[string]int) payload {
 	// Set Vendor
 	pay.record[hdr["vendor"]] = res.param.Vendor
 
-	// Return modified slice
 	return pay
 }
 
-func outputCSV(out string, res resources, results <-chan payload) {
+func outputCSV(out string, res resources, results <-chan payload, hcm map[string]int) {
 	f, err := os.Create(out)
 	if err != nil {
 		log.Fatalln(err)
