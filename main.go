@@ -381,7 +381,7 @@ func loadHist() map[string]int {
 		if err != nil {
 			log.Fatal(err)
 		}
-		hisp[tCase(s[0])] = hisp[tCase(s[0])] + 1
+		hisp[tCase(s[0])]++
 	}
 	return hisp
 }
@@ -409,7 +409,7 @@ func loadDNM() map[string]int {
 		if err != nil {
 			log.Fatal(err)
 		}
-		dnm[tCase(s[0])] = dnm[tCase(s[0])] + 1
+		dnm[tCase(s[0])]++
 	}
 	return dnm
 }
@@ -438,7 +438,7 @@ func loadGenS() map[string]int {
 			log.Fatal(err)
 		}
 		adrZip := fmt.Sprintf("%v %v", tCase(s[2]), tCase(s[5]))
-		gen[adrZip] = gen[adrZip] + 1
+		gen[adrZip]++
 	}
 	return gen
 }
@@ -467,7 +467,7 @@ func loadGenSNm() map[string]int {
 			log.Fatal(err)
 		}
 		fnln := fmt.Sprintf("%v %v", tCase(s[0]), tCase(s[1]))
-		gen[fnln] = gen[fnln] + 1
+		gen[fnln]++
 	}
 	return gen
 }
