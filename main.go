@@ -71,7 +71,7 @@ func munger() {
 		if err != nil {
 			log.Fatalln("Error opening source file", err)
 		}
-		reader := csv.NewReader(file)
+		defer file.Close()
 
 		resource := resources{
 			param:  loadConfig(),
@@ -87,7 +87,7 @@ func munger() {
 
 		tasks := make(chan payload)
 		go func() {
-			rows, err := reader.ReadAll()
+			rows, err := csv.NewReader(file).ReadAll()
 			if err != nil {
 				log.Fatalln("Error reading source row", err)
 			}
