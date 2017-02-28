@@ -87,14 +87,12 @@ func munger() {
 
 		tasks := make(chan payload)
 		go func() {
-			for i := 0; ; i++ {
+			rows, err := reader.ReadAll()
+			if err != nil {
+				log.Fatalln("Error reading source row", err)
+			}
+			for i, row := range rows {
 				counter = i
-				row, err := reader.Read()
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					log.Fatalln("Error reading source row", err)
-				}
 				if i == 0 {
 					colMap = setCol(payload{
 						counter: i,
