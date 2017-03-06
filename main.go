@@ -52,10 +52,6 @@ type resources struct {
 }
 
 func main() {
-	munger()
-}
-
-func munger() {
 	start := time.Now()
 	gophers := flag.Int("C", 10, "Set workers to run in parallel")
 	flag.Parse()
